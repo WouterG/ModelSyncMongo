@@ -1,3 +1,13 @@
+# [ Warning! ]
+
+This is not a big official mongo library, it's made in a short time by one person, 
+and I do not recommend using it in production before it's been looked at by several others. 
+For private use I also advice you to only use it if you're okay with sometimes renaming 
+for instance class names due to how unfinished this still is.
+
+Feedback is always welcome.
+
+
 # SimpleMongo
 A simplified MongoDB interaction library, featuring Query building and object syncing
 
