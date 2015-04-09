@@ -119,22 +119,22 @@ First off you'll want a database model class:
         private String username;
         private Permission permission;
 
-        @DBSave(value = "username", index = true)
+        @DBSync(value = "username", index = true)
         public String getUsername() {
             return username;
         }
 
-        @DBLoad(value = "username", index = true)
+        @DBSync(value = "username", index = true)
         public void setUsername(String username) {
             this.username = username;
         }
 
-        @DBSave("permission")
+        @DBSync("permission")
         public int getPermission() {
             return permission.getId();
         }
 
-        @DBLoad("permission")
+        @DBSync("permission")
         public void setPermission(int permission) {
             this.permission = Permission.fromId(permission);
         }

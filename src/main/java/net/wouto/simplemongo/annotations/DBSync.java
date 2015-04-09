@@ -4,7 +4,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface DBSave {
+public @interface DBSync {
     
     public String value();
     

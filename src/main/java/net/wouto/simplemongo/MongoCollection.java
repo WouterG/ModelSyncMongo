@@ -12,8 +12,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.wouto.simplemongo.annotations.DBLoad;
-import net.wouto.simplemongo.annotations.DBSave;
+import net.wouto.simplemongo.annotations.DBSync;
 import net.wouto.simplemongo.callbacks.LoadAllCallback;
 import net.wouto.simplemongo.callbacks.MultiReadCallback;
 import net.wouto.simplemongo.callbacks.ReadCallback;
@@ -289,10 +288,10 @@ public class MongoCollection {
         Method[] methods = instance.getClass().getMethods();
         for (Method m : methods) {
             try {
-                if (!m.isAnnotationPresent(DBSave.class)) {
+                if (!m.isAnnotationPresent(DBSync.class)) {
                     continue;
                 }
-                DBSave saveData = m.getAnnotation(DBSave.class);
+                DBSync saveData = m.getAnnotation(DBSync.class);
                 if (saveData == null) {
                     continue;
                 }
@@ -340,10 +339,10 @@ public class MongoCollection {
     private final <T extends SyncedClass> T fromDBObject(T instance, DBObject data) {
         Method[] methods = instance.getClass().getMethods();
         for (Method m : methods) {
-            if (!m.isAnnotationPresent(DBLoad.class)) {
+            if (!m.isAnnotationPresent(DBSync.class)) {
                 continue;
             }
-            DBLoad load = m.getAnnotation(DBLoad.class);
+            DBSync load = m.getAnnotation(DBSync.class);
             if (load == null) {
                 continue;
             }
@@ -384,10 +383,10 @@ public class MongoCollection {
         boolean exc = true;
         for (Method m : methods) {
             try {
-                if (!m.isAnnotationPresent(DBSave.class)) {
+                if (!m.isAnnotationPresent(DBSync.class)) {
                     continue;
                 }
-                DBSave saveData = m.getAnnotation(DBSave.class);
+                DBSync saveData = m.getAnnotation(DBSync.class);
                 if (saveData == null) {
                     continue;
                 }
@@ -437,7 +436,7 @@ public class MongoCollection {
         Method[] methods = instance.getClass().getMethods();
         for (Method m : methods) {
             try {
-                DBSave saveData = m.getAnnotation(DBSave.class);
+                DBSync saveData = m.getAnnotation(DBSync.class);
                 if (saveData == null) {
                     continue;
                 }
