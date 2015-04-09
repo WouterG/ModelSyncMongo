@@ -10,7 +10,7 @@ public class MongoScheduler {
     private final ExecutorService writeThreads;
     private final ExecutorService readThreads;
     
-    public MongoScheduler(MongoConnection connection) {
+    MongoScheduler(MongoConnection connection) {
         this.writeThreads = Executors.newCachedThreadPool(new SimpleMongoThreadFactory("SimpleMongo-Write"));
         this.readThreads = Executors.newCachedThreadPool(new SimpleMongoThreadFactory("SimpleMongo-Read"));
         this.connection = connection;

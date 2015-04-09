@@ -27,23 +27,13 @@ First off you want to get a `MongoConnection` instance, and connect it to your s
     }
 ```
 
-#### Getting a scheduler instance
-Once you've got your `MongoConnection` instance, which we'll further refer to as `connection` we can get a `MongoScheduler` instance. The scheduler is used to run all tasks in it's own threaded asynchronous environment (or in sync if the specific sync marked methods are used).
-```java
-    private MongoScheduler scheduler;
-    
-    public void makeScheduler() {
-        scheduler = new MongoScheduler(connection);
-    }
-```
-
 #### Getting a collection instance
 Now you can get a `MongoCollection` instance from the scheduler.
 ```java
     private MongoCollection collection;
     
     public void initCollection(String db) {
-        collection = scheduler.getCollection(db, "Users");
+        collection = connection.getCollection(db, "Users");
     }
 ```
 

@@ -9,6 +9,7 @@ public class MongoConnection {
     private int port;
     
     private MongoClient client;
+    private MongoScheduler scheduler;
     
     public MongoConnection() {
         this("localhost");
@@ -21,6 +22,7 @@ public class MongoConnection {
     public MongoConnection(String ip, int port) {
         this.ip = ip;
         this.port = port;
+        this.scheduler = new MongoScheduler(this);
     }
     
     public void connect() throws UnknownHostException {
@@ -30,6 +32,17 @@ public class MongoConnection {
     public void disconnect() {
         this.client.close();
         this.client = null;
+    }
+    
+    public MongoScheduler getScheduler() {
+        return this.scheduler;
+    }
+    
+    public MongoCollection getCollection(String database, String collection) {
+        if (this.client == null) {
+            return null;
+        }
+        return this.scheduler.getCollection(database, collection);
     }
     
     public String getIp() {
