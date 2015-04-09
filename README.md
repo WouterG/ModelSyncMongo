@@ -28,7 +28,7 @@ First off you want to get a `MongoConnection` instance, and connect it to your s
 ```
 
 #### Getting a collection instance
-Now you can get a `MongoCollection` instance from the scheduler.
+Now you can get a `MongoCollection` instance from the connection.
 ```java
     private MongoCollection collection;
     
