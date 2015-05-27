@@ -44,8 +44,9 @@ Now you can start grabbing data from the database. A few examples:
 ```java
     Query getVerifiedWouter = Query.and()
             .add(Query.equals("username", "WouterG"))
-            .add(Query.not().add(Query.size("verifiedEmails", 0)))
-            .finish();
+            .add(Query.not()
+                .add(Query.size("verifiedEmails", 0)).finish()
+            ).finish();
 
     collection.findOne(getVerifiedWouter, new ReadCallback() {
 
