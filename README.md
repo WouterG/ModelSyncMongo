@@ -17,20 +17,21 @@ There's currently no Maven repository setup yet, so to use the project you'll ha
 ## Usage
 
 #### Opening connection
-First off you want to get a `MongoConnection` instance, and connect it to your server
+First off you want to get a `SimpleConnection` instance, and connect it to your server
 ```java
-    private MongoConnection connection;
+    private SimpleConnection connection;
     
     public void makeConnection() throws UnknownHostException {
-        connection = new MongoConnection("mongo.domain.com", 27017); // defaults to "localhost" and 27017
+        connection = new SimpleConnection("mongo.domain.com", 27017); // defaults to "localhost" and 27017
+        connection.setAuthentication("admin", "qwerty", "Users"); // authenticate if needed
         connection.connect(); // throws UnknownHostException
     }
 ```
 
 #### Getting a collection instance
-Now you can get a `MongoCollection` instance from the connection.
+Now you can get a `SimpleCollection` instance from the connection.
 ```java
-    private MongoCollection collection;
+    private SimpleCollection collection;
     
     public void initCollection(String db) {
         collection = connection.getCollection(db, "Users");
@@ -68,7 +69,7 @@ Now you can start grabbing data from the database. A few examples:
     collection.find(getAdmins, new MultiReadCallback() {
 
         @Override
-        public void onQueryDone(DBCursor result, Exception err) {
+        public void onQueryDone(MongoCursor result, Exception err) {
             if (err != null) {
                 err.printStackTrace();
             } else {
@@ -91,10 +92,10 @@ Now you can start grabbing data from the database. A few examples:
     Query matchingDocument = Query.greaterThan("permission", 3);
     Update update = Update.pull("userPermissions", "mod.users.update");
     // query, update, upsert, multi, callback
-    collection.update(matchingDocument, update, false, true, new WriteCallback() {
+    collection.update(matchingDocument, update, false, true, new UpdateCallback() {
 
         @Override
-        public void onQueryDone(WriteResult result, Exception err) {
+        public void onQueryDone(UpdateResult result, Exception err) {
             if (err == null) {
                 // success
             }
@@ -106,43 +107,25 @@ Now you can start grabbing data from the database. A few examples:
 #### Using the object syncing part
 First off you'll want a database model class:
 ```java
-    public class UserModel implements SyncedClass {
-        private String username;
-        private Permission permission;
-
-        @DBSync(value = "username", index = true)
-        public String getUsername() {
-            return username;
-        }
-
-        @DBSync(value = "username", index = true)
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        @DBSync("permission")
-        public int getPermission() {
-            return permission.getId();
-        }
-
-        @DBSync("permission")
-        public void setPermission(int permission) {
-            this.permission = Permission.fromId(permission);
-        }
+    public class UserModel {
+        @DBSync(index = true) public String uuid; // set as index value
+        @DBSync public String username;
+        @DBSync public int permission;
+        @DBSync("data") public byte[] randomData; // read from different DB field name
     }
 ```
 
 After that you can load an object with the model, modify it, and then save it back with the changes made.
 ```java
     UserModel model = new UserModel();
-    model.setUsername("WouterG");
+    model.uuid = "abcdefghijklmnopqrstuvwxyz123456";
 
     collection.load(model, new ObjectLoadedCallback<UserModel>() {
 
         @Override
         public void onObjectLoaded(UserModel object) {
             if (object != null) {
-                object.setPermission(Permission.BANNED.getId());
+                object.permission = Permission.BANNED.getId());
                 collection.save(object);
             }
         }
