@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DBSync {
     
-    public String value();
+    public String value() default "";
     
     public boolean index() default false;
     

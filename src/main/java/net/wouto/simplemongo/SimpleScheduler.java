@@ -3,25 +3,25 @@ package net.wouto.simplemongo;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MongoScheduler {
+public class SimpleScheduler {
     
-    private final MongoConnection connection;
+    private final SimpleConnection connection;
     
     private final ExecutorService writeThreads;
     private final ExecutorService readThreads;
     
-    MongoScheduler(MongoConnection connection) {
+    SimpleScheduler(SimpleConnection connection) {
         this.writeThreads = Executors.newCachedThreadPool(new SimpleMongoThreadFactory("SimpleMongo-Write"));
         this.readThreads = Executors.newCachedThreadPool(new SimpleMongoThreadFactory("SimpleMongo-Read"));
         this.connection = connection;
     }
     
-    public MongoConnection getConnection() {
+    public SimpleConnection getConnection() {
         return this.connection;
     }
     
-    public MongoCollection getCollection(String db, String collection) {
-        return new MongoCollection(this, this.connection.getConnection().getDB(db).getCollection(collection));
+    public SimpleCollection getCollection(String db, String collection) {
+        return new SimpleCollection(this, this.connection.getConnection().getDatabase(db).getCollection(collection));
     }
     
     public void doWrite(Runnable r) {

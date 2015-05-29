@@ -2,51 +2,60 @@ package net.wouto.simplemongo;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
-import com.mongodb.WriteResult;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.wouto.simplemongo.annotations.DBSync;
+import net.wouto.simplemongo.callbacks.DeleteCallback;
 import net.wouto.simplemongo.callbacks.LoadAllCallback;
 import net.wouto.simplemongo.callbacks.MultiReadCallback;
 import net.wouto.simplemongo.callbacks.ReadCallback;
+import net.wouto.simplemongo.callbacks.UpdateCallback;
 import net.wouto.simplemongo.callbacks.WriteCallback;
 import net.wouto.simplemongo.query.Query;
 import net.wouto.simplemongo.sync.ObjectLoadedCallback;
 import net.wouto.simplemongo.sync.SyncedClass;
 import net.wouto.simplemongo.update.Update;
+import org.apache.commons.lang.ClassUtils;
 
-public class MongoCollection {
+public class SimpleCollection {
 
-    private MongoScheduler scheduler;
-    private DBCollection collection;
+    private SimpleScheduler scheduler;
+    private MongoCollection collection;
 
-    public MongoCollection(MongoScheduler scheduler, DBCollection collection) {
+    public SimpleCollection(SimpleScheduler scheduler, MongoCollection collection) {
         this.scheduler = scheduler;
         this.collection = collection;
     }
 
-    public WriteResult updateSync(Query q, Update u) throws Exception {
-        return this.collection.update(q.getQuery(), u.getUpdateQuery());
+    public UpdateResult updateSync(Query q, Update u) throws Exception {
+        return this.collection.updateOne((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery());
     }
 
     public void update(Query q, Update u) {
         this.update(q, u, null);
     }
 
-    public void update(final Query q, final Update u, final WriteCallback callback) {
+    public void update(final Query q, final Update u, final UpdateCallback callback) {
         this.scheduler.doWrite(new Runnable() {
 
             @Override
             public void run() {
                 try {
-                    WriteResult wr = MongoCollection.this.updateSync(q, u);
+                    UpdateResult wr = SimpleCollection.this.updateSync(q, u);
                     if (callback != null) {
                         callback.onQueryDone(wr, null);
                     }
@@ -60,21 +69,27 @@ public class MongoCollection {
         });
     }
 
-    public WriteResult updateSync(Query q, Update u, boolean upsert, boolean multi) throws Exception {
-        return this.collection.update(q.getQuery(), u.getUpdateQuery(), upsert, multi);
+    public UpdateResult updateSync(Query q, Update u, boolean upsert, boolean multi) throws Exception {
+        UpdateOptions options = new UpdateOptions();
+        options.upsert(upsert);
+        if (multi) {
+            return this.collection.updateMany((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery(), options);
+        } else {
+            return this.collection.updateOne((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery(), options);
+        }
     }
 
     public void update(Query q, Update u, boolean upsert, boolean multi) {
         this.update(q, u, upsert, multi, null);
     }
 
-    public void update(final Query q, final Update u, final boolean upsert, final boolean multi, final WriteCallback callback) {
+    public void update(final Query q, final Update u, final boolean upsert, final boolean multi, final UpdateCallback callback) {
         this.scheduler.doWrite(new Runnable() {
 
             @Override
             public void run() {
                 try {
-                    WriteResult wr = MongoCollection.this.updateSync(q, u, upsert, multi);
+                    UpdateResult wr = SimpleCollection.this.updateSync(q, u, upsert, multi);
                     if (callback != null) {
                         callback.onQueryDone(wr, null);
                     }
@@ -88,22 +103,24 @@ public class MongoCollection {
         });
     }
 
-    public WriteResult updateOrInsertSync(String key, Object value, Update set) throws Exception {
+    public UpdateResult updateOrInsertSync(String key, Object value, Update set) throws Exception {
         set.append(Update.setOnInsert(key, value));
-        return this.collection.update(new BasicDBObject(key, value), set.getUpdateQuery(), true, false);
+        UpdateOptions u = new UpdateOptions();
+        u.upsert(true);
+        return this.collection.updateOne(new BasicDBObject(key, value), (BasicDBObject) set.getUpdateQuery(), u);
     }
 
     public void updateOrInsert(String key, Object value, Update set) {
         this.updateOrInsert(key, value, set, null);
     }
 
-    public void updateOrInsert(final String key, final Object value, final Update set, final WriteCallback callback) {
+    public void updateOrInsert(final String key, final Object value, final Update set, final UpdateCallback callback) {
         this.scheduler.doWrite(new Runnable() {
 
             @Override
             public void run() {
                 try {
-                    WriteResult wr = MongoCollection.this.updateOrInsertSync(key, value, set);
+                    UpdateResult wr = SimpleCollection.this.updateOrInsertSync(key, value, set);
                     if (callback != null) {
                         callback.onQueryDone(wr, null);
                     }
@@ -117,8 +134,8 @@ public class MongoCollection {
         });
     }
 
-    public WriteResult insertSync(BasicDBObject obj) throws Exception {
-        return this.collection.insert(obj);
+    public void insertSync(BasicDBObject obj) throws Exception {
+        this.collection.insertOne(obj);
     }
 
     public void insert(BasicDBObject obj) {
@@ -131,79 +148,7 @@ public class MongoCollection {
             @Override
             public void run() {
                 try {
-                    WriteResult wr = MongoCollection.this.insertSync(obj);
-                    if (callback != null) {
-                        callback.onQueryDone(wr, null);
-                    }
-                } catch (Exception ex) {
-                    if (callback != null) {
-                        callback.onQueryDone(null, ex);
-                    }
-                }
-            }
-
-        });
-    }
-
-    public DBObject findOneSync(Query q) throws Exception {
-        return this.collection.findOne(q.getQuery());
-    }
-
-    public void findOne(final Query q, final ReadCallback callback) {
-        this.scheduler.doRead(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    DBObject d = MongoCollection.this.findOneSync(q);
-                    if (callback != null) {
-                        callback.onQueryDone(d, null);
-                    }
-                } catch (Exception ex) {
-                    if (callback != null) {
-                        callback.onQueryDone(null, ex);
-                    }
-                }
-            }
-
-        });
-    }
-
-    public DBCursor findSync(Query q) throws Exception {
-        return this.collection.find(q.getQuery());
-    }
-
-    public void find(final Query q, final MultiReadCallback callback) {
-        this.scheduler.doRead(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    DBCursor c = MongoCollection.this.findSync(q);
-                    if (callback != null) {
-                        callback.onQueryDone(c, null);
-                    }
-                } catch (Exception ex) {
-                    if (callback != null) {
-                        callback.onQueryDone(null, ex);
-                    }
-                }
-            }
-
-        });
-    }
-
-    public DBObject findAndRemoveSync(Query q) throws Exception {
-        return this.collection.findAndRemove(q.getQuery());
-    }
-
-    public void findAndRemove(final Query q, final ReadCallback callback) {
-        this.scheduler.doWrite(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    DBObject obj = MongoCollection.this.findAndRemoveSync(q);
+                    SimpleCollection.this.insertSync(obj);
                     if (callback != null) {
                         callback.onQueryDone(obj, null);
                     }
@@ -217,21 +162,102 @@ public class MongoCollection {
         });
     }
 
-    public WriteResult removeSync(Query q) throws Exception {
-        return this.collection.remove(q.getQuery());
+    public DBObject findOneSync(Query q) throws Exception {
+        MongoCursor cursor = this.collection.find((BasicDBObject) q.getQuery()).iterator();
+        Object o = cursor.next();
+        if (o == null) {
+            return null;
+        }
+        return (DBObject) o;
+    }
+
+    public void findOne(final Query q, final ReadCallback callback) {
+        this.scheduler.doRead(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    DBObject d = SimpleCollection.this.findOneSync(q);
+                    if (callback != null) {
+                        callback.onQueryDone(d, null);
+                    }
+                } catch (Exception ex) {
+                    if (callback != null) {
+                        callback.onQueryDone(null, ex);
+                    }
+                }
+            }
+
+        });
+    }
+
+    public MongoCursor findSync(Query q) throws Exception {
+        return this.collection.find((BasicDBObject) q.getQuery()).iterator();
+    }
+
+    public void find(final Query q, final MultiReadCallback callback) {
+        this.scheduler.doRead(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    MongoCursor c = SimpleCollection.this.findSync(q);
+                    if (callback != null) {
+                        callback.onQueryDone(c, null);
+                    }
+                } catch (Exception ex) {
+                    if (callback != null) {
+                        callback.onQueryDone(null, ex);
+                    }
+                }
+            }
+
+        });
+    }
+
+    public DBObject findOneAndRemoveSync(Query q) throws Exception {
+        Object o = this.collection.findOneAndDelete((BasicDBObject) q.getQuery());
+        if (o == null) {
+            return null;
+        }
+        return (DBObject) o;
+    }
+
+    public void findAndRemove(final Query q, final ReadCallback callback) {
+        this.scheduler.doWrite(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    DBObject obj = SimpleCollection.this.findOneAndRemoveSync(q);
+                    if (callback != null) {
+                        callback.onQueryDone(obj, null);
+                    }
+                } catch (Exception ex) {
+                    if (callback != null) {
+                        callback.onQueryDone(null, ex);
+                    }
+                }
+            }
+
+        });
+    }
+
+    public DeleteResult removeSync(Query q) throws Exception {
+        return this.collection.deleteMany((BasicDBObject) q.getQuery());
     }
 
     public void remove(Query q) {
         this.remove(q, null);
     }
 
-    public void remove(final Query q, final WriteCallback callback) {
+    public void remove(final Query q, final DeleteCallback callback) {
         this.scheduler.doWrite(new Runnable() {
 
             @Override
             public void run() {
                 try {
-                    WriteResult wr = MongoCollection.this.removeSync(q);
+                    DeleteResult wr = SimpleCollection.this.removeSync(q);
                     if (callback != null) {
                         callback.onQueryDone(wr, null);
                     }
@@ -251,11 +277,12 @@ public class MongoCollection {
         if (!cAccess) {
             constructor.setAccessible(true);
         }
-        DBCursor cursor = this.findSync(Query.empty);
+        MongoCursor cursor = this.findSync(Query.empty);
         ArrayList<T> data = new ArrayList();
-        for (DBObject obj : cursor) {
+        while (cursor.hasNext()) {
+            DBObject obj = (DBObject) cursor.next();
             T instance = (T) constructor.newInstance();
-            MongoCollection.this.fromDBObject(instance, obj);
+            SimpleCollection.this.fromDBObject(instance, obj);
             data.add(instance);
         }
         constructor.setAccessible(cAccess);
@@ -267,7 +294,7 @@ public class MongoCollection {
             @Override
             public void run() {
                 try {
-                    T[] t = MongoCollection.this.loadAllSync(c);
+                    T[] t = SimpleCollection.this.loadAllSync(c);
                     if (callback != null) {
                         callback.onQueryDone(t, null);
                     }
@@ -285,89 +312,92 @@ public class MongoCollection {
         Update update = new Update();
         String key = null;
         Object value = null;
-        Method[] methods = instance.getClass().getMethods();
-        for (Method m : methods) {
+        Field[] fields = instance.getClass().getDeclaredFields();
+        for (Field f : fields) {
             try {
-                if (!m.isAnnotationPresent(DBSync.class)) {
+                if (!f.isAnnotationPresent(DBSync.class)) {
                     continue;
                 }
-                DBSync saveData = m.getAnnotation(DBSync.class);
+                DBSync saveData = f.getAnnotation(DBSync.class);
                 if (saveData == null) {
                     continue;
                 }
-                if (m.getReturnType().equals(Void.TYPE)) {
-                    continue;
-                }
-                if (m.getParameterTypes().length > 0) {
-                    continue;
-                }
-                boolean hadAccess = m.isAccessible();
+                boolean hadAccess = f.isAccessible();
                 if (!hadAccess) {
-                    m.setAccessible(true);
+                    f.setAccessible(true);
                 }
-                Object o = m.invoke(instance);
-                m.setAccessible(hadAccess);
-                if (saveData.index() && o != null && !saveData.value().equals("_id")) {
-                    key = saveData.value();
+                Object o = f.get(instance);
+                String fieldName = f.getName();
+                if (!saveData.value().isEmpty()) {
+                    fieldName = saveData.value();
+                }
+                f.setAccessible(hadAccess);
+                if (saveData.index()) {
+                    key = fieldName;
                     value = o;
-                    index.append(Query.equals(saveData.value(), o));
-                } else if (!saveData.value().equals("_id")) {
-                    update.append(Update.set(saveData.value(), o));
+                    index.append(Query.equals(fieldName, o));
+                } else if (!fieldName.equals("_id")) {
+                    update.append(Update.set(fieldName, o));
                 }
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+            } catch (IllegalAccessException | IllegalArgumentException ex) {
                 ex.printStackTrace();
             }
         }
         this.updateOrInsert(key, value, update);
     }
 
+    private <T> T instantiate(Class<T> cls) throws Exception {
+        final Constructor<T> constr = (Constructor<T>) cls.getConstructors()[0];
+        boolean a = constr.isAccessible();
+        if (!a) {
+            constr.setAccessible(true);
+        }
+        final List<Object> params = new ArrayList<Object>();
+        for (Class<?> pType : constr.getParameterTypes()) {
+            params.add((pType.isPrimitive()) ? ClassUtils.primitiveToWrapper(pType).newInstance() : null);
+        }
+        final T instance = constr.newInstance(params.toArray());
+        constr.setAccessible(a);
+        return instance;
+    }
+
     private final <T extends SyncedClass> T fromDBObject(Class<T> type, DBObject data) {
         try {
-            Constructor c = type.getDeclaredConstructor();
-            boolean a = c.isAccessible();
-            if (!a) {
-                c.setAccessible(true);
-            }
-            T obj = (T) c.newInstance();
+            T obj = (T) instantiate(type);
             return fromDBObject(obj, data);
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(MongoCollection.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SimpleCollection.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (Exception ex) {
+            Logger.getLogger(SimpleCollection.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }
 
     private final <T extends SyncedClass> T fromDBObject(T instance, DBObject data) {
-        Method[] methods = instance.getClass().getMethods();
-        for (Method m : methods) {
-            if (!m.isAnnotationPresent(DBSync.class)) {
+        Field[] fields = instance.getClass().getDeclaredFields();
+        for (Field f : fields) {
+            if (!f.isAnnotationPresent(DBSync.class)) {
                 continue;
             }
-            DBSync load = m.getAnnotation(DBSync.class);
+            DBSync load = f.getAnnotation(DBSync.class);
             if (load == null) {
                 continue;
             }
-            if (m.getParameterTypes().length != 1) {
-                continue;
-            }
-            boolean accessible = m.isAccessible();
+            boolean accessible = f.isAccessible();
             if (!accessible) {
-                m.setAccessible(true);
+                f.setAccessible(true);
             }
-            boolean normal = true;
-            if (m.getParameterTypes()[0].isInstance(SyncedClass.class)) {
-                normal = false;
+            String varName = f.getName();
+            if (!load.value().isEmpty()) {
+                varName = load.value();
             }
-            Object o = data.get(load.value());
+            Object o = data.get(varName);
             try {
-                if (normal) {
-                    m.invoke(instance, o);
-                } else {
-                    m.invoke(instance, MongoCollection.this.fromDBObject(((Class<? extends SyncedClass>) m.getParameterTypes()[0]), (DBObject) o));
-                }
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(MongoCollection.class.getName()).log(Level.SEVERE, null, ex);
+                f.set(instance, o);
+            } catch (IllegalAccessException | IllegalArgumentException ex) {
+                Logger.getLogger(SimpleCollection.class.getName()).log(Level.SEVERE, null, ex);
             }
-            m.setAccessible(accessible);
+            f.setAccessible(accessible);
         }
         return instance;
     }
@@ -421,7 +451,7 @@ public class MongoCollection {
                 if (err != null) {
                     err.printStackTrace();
                 } else if (result != null) {
-                    MongoCollection.this.fromDBObject(instance, result);
+                    SimpleCollection.this.fromDBObject(instance, result);
                     callback.onObjectLoaded(cast.cast(instance));
                 } else {
                     System.out.println("Failed loading data for " + instance.getClass().getName());
@@ -465,4 +495,9 @@ public class MongoCollection {
         }
         return b;
     }
+
+    public MongoCollection getHandle() {
+        return this.collection;
+    }
+
 }

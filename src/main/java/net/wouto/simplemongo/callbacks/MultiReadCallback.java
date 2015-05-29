@@ -1,9 +1,9 @@
 package net.wouto.simplemongo.callbacks;
 
-import com.mongodb.DBCursor;
+import com.mongodb.client.MongoCursor;
 
 public interface MultiReadCallback {
     
-    public void onQueryDone(DBCursor result, Exception err);
+    public void onQueryDone(MongoCursor result, Exception err);
     
 }
