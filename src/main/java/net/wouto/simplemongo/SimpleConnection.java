@@ -1,10 +1,9 @@
 package net.wouto.simplemongo;
 
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 
 public class SimpleConnection {
     
@@ -14,7 +13,9 @@ public class SimpleConnection {
     private MongoClient client;
     private SimpleScheduler scheduler;
     
-    private MongoCredential credential;
+    private String username;
+    private String password;
+    private String authDB;
     
     public SimpleConnection() {
         this("localhost");
@@ -28,20 +29,28 @@ public class SimpleConnection {
         this.ip = ip;
         this.port = port;
         this.scheduler = new SimpleScheduler(this);
-        this.credential = null;
+        this.username = null;
+        this.password = null;
+        this.authDB = null;
     }
     
     public void setAuthentication(String username, String password, String database) {
-        this.credential = MongoCredential.createCredential(username, database, password.toCharArray());
+        this.username = username;
+        this.password = password;
+        this.authDB = database;
     }
     
     public void connect() throws UnknownHostException {
-        ServerAddress address = new ServerAddress(this.ip, this.port);
-        if (this.credential != null) {
-            this.client = new MongoClient(address, Arrays.asList(this.credential));
-        } else {
-            this.client = new MongoClient(address);
+        if (this.ip.endsWith("/")) {
+            this.ip = this.ip.substring(0, this.ip.length() - 1);
         }
+        MongoClientURI uri;
+        if (this.username != null && this.password != null && authDB != null) {
+            uri = new MongoClientURI("mongodb://" + this.username + ":" + this.password + "@" + this.ip + ":" + this.port + "/?authSource=" + this.authDB);
+        } else {
+            uri = new MongoClientURI("mongodb://" + this.ip + ":" + this.port + "/");
+        }
+        this.client = new MongoClient(uri);
     }
     
     public void disconnect() {
