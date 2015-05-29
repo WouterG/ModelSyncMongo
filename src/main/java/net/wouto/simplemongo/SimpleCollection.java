@@ -1,7 +1,6 @@
 package net.wouto.simplemongo;
 
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -12,10 +11,8 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.wouto.simplemongo.annotations.DBSync;
@@ -27,7 +24,6 @@ import net.wouto.simplemongo.callbacks.UpdateCallback;
 import net.wouto.simplemongo.callbacks.WriteCallback;
 import net.wouto.simplemongo.query.Query;
 import net.wouto.simplemongo.sync.ObjectLoadedCallback;
-import net.wouto.simplemongo.sync.SyncedClass;
 import net.wouto.simplemongo.update.Update;
 import org.apache.commons.lang.ClassUtils;
 
@@ -271,7 +267,7 @@ public class SimpleCollection {
         });
     }
 
-    public <T extends SyncedClass> T[] loadAllSync(Class<T> c) throws Exception {
+    public <T> T[] loadAllSync(Class<T> c) throws Exception {
         Constructor constructor = c.getDeclaredConstructor();
         boolean cAccess = constructor.isAccessible();
         if (!cAccess) {
@@ -289,7 +285,7 @@ public class SimpleCollection {
         return (T[]) data.toArray((T[]) Array.newInstance(c, data.size()));
     }
 
-    public <T extends SyncedClass> void loadAll(final Class<T> c, final LoadAllCallback callback) {
+    public <T> void loadAll(final Class<T> c, final LoadAllCallback callback) {
         this.scheduler.doRead(new Runnable() {
             @Override
             public void run() {
@@ -307,7 +303,7 @@ public class SimpleCollection {
         });
     }
 
-    public final <T extends SyncedClass> void save(T instance) {
+    public final <T> void save(T instance) {
         Query index = new Query();
         Update update = new Update();
         String key = null;
@@ -361,7 +357,7 @@ public class SimpleCollection {
         return instance;
     }
 
-    private final <T extends SyncedClass> T fromDBObject(Class<T> type, DBObject data) {
+    private final <T> T fromDBObject(Class<T> type, DBObject data) {
         try {
             T obj = (T) instantiate(type);
             return fromDBObject(obj, data);
@@ -373,7 +369,7 @@ public class SimpleCollection {
         return null;
     }
 
-    private final <T extends SyncedClass> T fromDBObject(T instance, DBObject data) {
+    private final <T> T fromDBObject(T instance, DBObject data) {
         Field[] fields = instance.getClass().getDeclaredFields();
         for (Field f : fields) {
             if (!f.isAnnotationPresent(DBSync.class)) {
@@ -402,40 +398,38 @@ public class SimpleCollection {
         return instance;
     }
 
-    public final <T extends SyncedClass> void load(T instance) {
+    public final <T> void load(T instance) {
         this.load(instance, null);
     }
 
-    public final <T extends SyncedClass> void load(final T instance, final ObjectLoadedCallback callback) {
-        Method[] methods = instance.getClass().getMethods();
+    public final <T> void load(final T instance, final ObjectLoadedCallback callback) {
+        Field[] fields = instance.getClass().getDeclaredFields();
         Query q = new Query();
         final Class<?> cast = instance.getClass();
         boolean exc = true;
-        for (Method m : methods) {
+        for (Field f : fields) {
             try {
-                if (!m.isAnnotationPresent(DBSync.class)) {
+                if (!f.isAnnotationPresent(DBSync.class)) {
                     continue;
                 }
-                DBSync saveData = m.getAnnotation(DBSync.class);
-                if (saveData == null) {
-                    continue;
-                }
-                if (m.getParameterTypes().length != 0) {
-                    continue;
-                }
-                boolean access = m.isAccessible();
+                DBSync saveData = f.getAnnotation(DBSync.class);
+                boolean access = f.isAccessible();
                 if (!access) {
-                    m.setAccessible(access);
+                    f.setAccessible(access);
+                }
+                String varName = f.getName();
+                if (!saveData.value().isEmpty()) {
+                    varName = saveData.value();
                 }
                 if (saveData.index()) {
-                    Object value = m.invoke(instance);
-                    if (saveData.value() != null && value != null) {
-                        q.append(Query.equals(saveData.value(), value));
+                    Object value = f.get(instance);
+                    if (varName != null && value != null) {
+                        q.append(Query.equals(varName, value));
                         exc = false;
                     }
                 }
-                m.setAccessible(access);
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+                f.setAccessible(access);
+            } catch (IllegalAccessException | IllegalArgumentException ex) {
                 ex.printStackTrace();
             }
         }
@@ -461,35 +455,29 @@ public class SimpleCollection {
         });
     }
 
-    public static <T extends SyncedClass> BasicDBObject asDBObject(T instance) {
+    public static <T> BasicDBObject asDBObject(T instance) {
         BasicDBObject b = new BasicDBObject();
-        Method[] methods = instance.getClass().getMethods();
-        for (Method m : methods) {
+        Field[] fields = instance.getClass().getDeclaredFields();
+        for (Field f : fields) {
             try {
-                DBSync saveData = m.getAnnotation(DBSync.class);
+                DBSync saveData = f.getAnnotation(DBSync.class);
                 if (saveData == null) {
                     continue;
                 }
-                if (m.getReturnType().equals(Void.TYPE)) {
-                    continue;
-                }
-                if (m.getParameterTypes().length > 0) {
-                    continue;
-                }
-                boolean accessible = m.isAccessible();
+                boolean accessible = f.isAccessible();
                 if (!accessible) {
-                    m.setAccessible(true);
+                    f.setAccessible(true);
                 }
-                Object o = m.invoke(instance);
+                String varName = f.getName();
+                if (!saveData.value().isEmpty()) {
+                    varName = saveData.value();
+                }
+                Object o = f.get(instance);
                 if (!saveData.value().equals("_id")) {
-                    Object d = o;
-                    if (o instanceof SyncedClass) {
-                        d = asDBObject((SyncedClass) o);
-                    }
-                    b.put(saveData.value(), d);
+                    b.put(varName, o);
                 }
-                m.setAccessible(accessible);
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+                f.setAccessible(accessible);
+            } catch (IllegalAccessException | IllegalArgumentException ex) {
                 ex.printStackTrace();
             }
         }
