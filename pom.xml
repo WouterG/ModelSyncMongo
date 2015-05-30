@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.wouto</groupId>
     <artifactId>SimpleMongo</artifactId>
-    <version>B2.0.0</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
     <build>
         <plugins>
