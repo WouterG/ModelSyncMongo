@@ -12,7 +12,8 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <finalName>SimpleMongo</finalName>                   
+                    <finalName>SimpleMongo</finalName>      
+					<outputDirectory>C:/m2-repo</outputDirectory>
                 </configuration>
             </plugin>       
         </plugins>
