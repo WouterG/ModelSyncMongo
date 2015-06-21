@@ -108,10 +108,17 @@ Now you can start grabbing data from the database. A few examples:
 First off you'll want a database model class:
 ```java
     public class UserModel {
-        @DBSync(index = true) public String uuid; // set as index value
-        @DBSync public String username;
-        @DBSync public int permission;
-        @DBSync("data") public byte[] randomData; // read from different DB field name
+        // Provided inserts the value on saving/inserting.
+        // Auto_increment keeps this value out when inserting and let's the database handle it
+        @Index(IndexType.PROVIDED) // set as index
+        @DBSync 
+        public String uuid;
+        @DBSync 
+        public String username;
+        @DBSync 
+        public int permission;
+        @DBSync("data") // read from different DB field name
+        public byte[] randomData; 
     }
 ```
 
