@@ -1,4 +1,4 @@
-package net.wouto.simplemongo.query;
+package net.wouto.modelsync.mongo.query;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;

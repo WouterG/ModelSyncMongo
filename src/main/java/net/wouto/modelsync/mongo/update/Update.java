@@ -1,10 +1,10 @@
-package net.wouto.simplemongo.update;
+package net.wouto.modelsync.mongo.update;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import java.util.Arrays;
-import net.wouto.simplemongo.query.Query;
+import net.wouto.modelsync.mongo.query.Query;
 
 public class Update {
     

@@ -1,4 +1,4 @@
-package net.wouto.simplemongo.callbacks;
+package net.wouto.modelsync.mongo.callbacks;
 
 public interface LoadAllCallback {
  

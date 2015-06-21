@@ -1,4 +1,4 @@
-package net.wouto.simplemongo.annotations;
+package net.wouto.modelsync.mongo.annotations;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

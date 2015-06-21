@@ -1,4 +1,4 @@
-package net.wouto.simplemongo.update;
+package net.wouto.modelsync.mongo.update;
 
 public enum PopOption {
 

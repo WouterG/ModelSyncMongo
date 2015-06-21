@@ -1,4 +1,4 @@
-package net.wouto.simplemongo;
+package net.wouto.modelsync.mongo;
 
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;

@@ -1,4 +1,4 @@
-package net.wouto.simplemongo.sync;
+package net.wouto.modelsync.mongo.sync;
 
 public interface ObjectLoadedCallback<T> {
     

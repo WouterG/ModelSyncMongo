@@ -1,4 +1,4 @@
-package net.wouto.simplemongo.query;
+package net.wouto.modelsync.mongo.query;
 
 public enum RegexOption {
     CASE_INSENSITIVE(2),

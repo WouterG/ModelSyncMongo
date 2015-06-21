@@ -1,4 +1,4 @@
-package net.wouto.simplemongo;
+package net.wouto.modelsync.mongo;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
@@ -22,16 +22,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.wouto.simplemongo.annotations.DBSync;
-import net.wouto.simplemongo.callbacks.DeleteCallback;
-import net.wouto.simplemongo.callbacks.LoadAllCallback;
-import net.wouto.simplemongo.callbacks.MultiReadCallback;
-import net.wouto.simplemongo.callbacks.ReadCallback;
-import net.wouto.simplemongo.callbacks.UpdateCallback;
-import net.wouto.simplemongo.callbacks.WriteCallback;
-import net.wouto.simplemongo.query.Query;
-import net.wouto.simplemongo.sync.ObjectLoadedCallback;
-import net.wouto.simplemongo.update.Update;
+import net.wouto.modelsync.mongo.annotations.DBSync;
+import net.wouto.modelsync.mongo.callbacks.DeleteCallback;
+import net.wouto.modelsync.mongo.callbacks.LoadAllCallback;
+import net.wouto.modelsync.mongo.callbacks.MultiReadCallback;
+import net.wouto.modelsync.mongo.callbacks.ReadCallback;
+import net.wouto.modelsync.mongo.callbacks.UpdateCallback;
+import net.wouto.modelsync.mongo.callbacks.WriteCallback;
+import net.wouto.modelsync.mongo.query.Query;
+import net.wouto.modelsync.mongo.sync.ObjectLoadedCallback;
+import net.wouto.modelsync.mongo.update.Update;
 import org.apache.commons.lang.ClassUtils;
 import org.bson.Document;
 
