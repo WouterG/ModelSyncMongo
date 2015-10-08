@@ -6,9 +6,13 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.List;
 import net.wouto.modelsync.mongo.callbacks.DeleteCallback;
-import net.wouto.modelsync.mongo.callbacks.LoadAllCallback;
+import net.wouto.modelsync.mongo.callbacks.LoadMultiCallback;
+import net.wouto.modelsync.mongo.callbacks.LoadOneCallback;
 import net.wouto.modelsync.mongo.callbacks.MultiReadCallback;
 import net.wouto.modelsync.mongo.callbacks.ReadCallback;
 import net.wouto.modelsync.mongo.callbacks.UpdateCallback;
@@ -30,7 +34,7 @@ public class MongoModelManager<T> {
         return this.collection.getHandle();
     }
 
-    public void loadAll(LoadAllCallback callback) {
+    public void loadAll(LoadMultiCallback callback) {
         this.collection.loadAll(type, callback);
     }
 
@@ -50,24 +54,61 @@ public class MongoModelManager<T> {
         return this.collection.removeSync(q);
     }
 
-    public void findAndRemove(Query q, ReadCallback callback) {
-        this.collection.findAndRemove(q, callback);
+    public void findAndRemove(Query q, final LoadOneCallback callback) {
+        this.collection.findAndRemove(q, new ReadCallback() {
+
+            @Override
+            public void onQueryDone(DBObject result, Exception err) {
+                if (err != null) {
+                    callback.onQueryDone(null, err);
+                } else {
+                    callback.onQueryDone(MongoModelManager.this.collection.fromDBObject(MongoModelManager.this.type, result), err);
+                }
+            }
+            
+        });
     }
 
     public DBObject findOneAndRemoveSync(Query q) throws Exception {
         return this.collection.findOneAndRemoveSync(q);
     }
 
-    public void find(Query q, MultiReadCallback callback) {
-        this.collection.find(q, callback);
+    public void find(Query q, final LoadMultiCallback callback) {
+        this.collection.find(q, new MultiReadCallback() {
+
+            @Override
+            public void onQueryDone(DBObject[] result, Exception err) {
+                if (err != null) {
+                    callback.onQueryDone(null, err);
+                } else {
+                    List<T> objects = new ArrayList();
+                    for (DBObject r : result) {
+                        objects.add(MongoModelManager.this.collection.fromDBObject(type, r));
+                    }
+                    callback.onQueryDone((T[])objects.toArray((T[])Array.newInstance(type, objects.size())), err);
+                }
+            }
+            
+        });
     }
 
     public MongoCursor findSync(Query q) throws Exception {
         return this.collection.findSync(q);
     }
 
-    public void findOne(Query q, ReadCallback callback) {
-        this.collection.findOne(q, callback);
+    public void findOne(Query q, final LoadOneCallback callback) {
+        this.collection.findOne(q, new ReadCallback() {
+
+            @Override
+            public void onQueryDone(DBObject result, Exception err) {
+                if (err != null) {
+                    callback.onQueryDone(null, err);
+                } else {
+                    callback.onQueryDone(MongoModelManager.this.collection.fromDBObject(type, result), err);
+                }
+            }
+            
+        });
     }
 
     public DBObject findOneSync(Query q) throws Exception {
