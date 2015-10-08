@@ -13,3 +13,6 @@ hs_err_pid*
 export-dependency.bat
 target/
 export-dependency.sh
+.settings/
+.classpath
+.project
