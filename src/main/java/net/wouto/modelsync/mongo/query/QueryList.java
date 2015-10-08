@@ -1,9 +1,9 @@
 package net.wouto.modelsync.mongo.query;
 
 import com.mongodb.BasicDBList;
-import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import java.util.Collection;
+import org.bson.Document;
 
 /**
  * A collection of queries for $or / $and etc.
@@ -25,11 +25,11 @@ public class QueryList {
         this.operator = operator;
     }
     
-    public DBObject getQuery() {
+    public Document getQuery() {
         if (key == null) {
-            return (DBObject) new BasicDBObject(operator, this.queryList);
+            return (Document) new Document(operator, this.queryList);
         } else {
-            return (DBObject) new BasicDBObject(key, new BasicDBObject(operator, queryList));
+            return (Document) new Document(key, new Document(operator, queryList));
         }
     }
     
@@ -38,7 +38,7 @@ public class QueryList {
         return this;
     }
     
-    public QueryList add(BasicDBObject query) {
+    public QueryList add(Document query) {
         this.queryList.add(query);
         return this;
     }

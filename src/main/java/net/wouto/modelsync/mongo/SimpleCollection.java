@@ -1,7 +1,6 @@
 package net.wouto.modelsync.mongo;
 
 import com.mongodb.BasicDBList;
-import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -24,12 +23,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.wouto.modelsync.mongo.annotations.DBSync;
 import net.wouto.modelsync.mongo.callbacks.DeleteCallback;
+import net.wouto.modelsync.mongo.callbacks.DocumentWriteCallback;
 import net.wouto.modelsync.mongo.callbacks.FindAndUpdateCallback;
 import net.wouto.modelsync.mongo.callbacks.LoadMultiCallback;
 import net.wouto.modelsync.mongo.callbacks.MultiReadCallback;
 import net.wouto.modelsync.mongo.callbacks.ReadCallback;
 import net.wouto.modelsync.mongo.callbacks.UpdateCallback;
-import net.wouto.modelsync.mongo.callbacks.WriteCallback;
 import net.wouto.modelsync.mongo.query.Query;
 import net.wouto.modelsync.mongo.sync.ObjectLoadedCallback;
 import net.wouto.modelsync.mongo.update.Update;
@@ -47,7 +46,7 @@ public class SimpleCollection {
     }
 
     public UpdateResult updateSync(Query q, Update u) throws Exception {
-        return this.collection.updateOne((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery());
+        return this.collection.updateOne((Document) q.getQuery(), (Document) u.getUpdateQuery());
     }
 
     public void update(Query q, Update u) {
@@ -78,9 +77,9 @@ public class SimpleCollection {
         UpdateOptions options = new UpdateOptions();
         options.upsert(upsert);
         if (multi) {
-            return this.collection.updateMany((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery(), options);
+            return this.collection.updateMany((Document) q.getQuery(), (Document) u.getUpdateQuery(), options);
         } else {
-            return this.collection.updateOne((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery(), options);
+            return this.collection.updateOne((Document) q.getQuery(), (Document) u.getUpdateQuery(), options);
         }
     }
 
@@ -112,7 +111,7 @@ public class SimpleCollection {
         set.append(Update.setOnInsert(key, value));
         UpdateOptions u = new UpdateOptions();
         u.upsert(true);
-        return this.collection.updateOne(new BasicDBObject(key, value), (BasicDBObject) set.getUpdateQuery(), u);
+        return this.collection.updateOne(new Document(key, value), (Document) set.getUpdateQuery(), u);
     }
 
     public void updateOrInsert(String key, Object value, Update set) {
@@ -129,7 +128,9 @@ public class SimpleCollection {
                     if (callback != null) {
                         callback.onQueryDone(wr, null);
                     }
+                    System.out.println("inserted succesfully");
                 } catch (Exception ex) {
+                    ex.printStackTrace();
                     if (callback != null) {
                         callback.onQueryDone(null, ex);
                     }
@@ -139,15 +140,15 @@ public class SimpleCollection {
         });
     }
 
-    public void insertSync(BasicDBObject obj) throws Exception {
+    public void insertSync(Document obj) throws Exception {
         this.collection.insertOne(obj);
     }
 
-    public void insert(BasicDBObject obj) {
+    public void insert(Document obj) {
         this.insert(obj, null);
     }
 
-    public void insert(final BasicDBObject obj, final WriteCallback callback) {
+    public void insert(final Document obj, final DocumentWriteCallback callback) {
         this.scheduler.doWrite(new Runnable() {
 
             @Override
@@ -168,7 +169,7 @@ public class SimpleCollection {
     }
 
     public DBObject findOneSync(Query q) throws Exception {
-        MongoCursor cursor = this.collection.find((BasicDBObject) q.getQuery()).iterator();
+        MongoCursor cursor = this.collection.find((Document) q.getQuery()).iterator();
         Object o = cursor.next();
         if (o == null) {
             return null;
@@ -197,7 +198,7 @@ public class SimpleCollection {
     }
 
     public MongoCursor findSync(Query q) throws Exception {
-        return this.collection.find((BasicDBObject) q.getQuery()).iterator();
+        return this.collection.find((Document) q.getQuery()).iterator();
     }
 
     public void find(final Query q, final MultiReadCallback callback) {
@@ -225,7 +226,7 @@ public class SimpleCollection {
     }
 
     public DBObject findOneAndRemoveSync(Query q) throws Exception {
-        Object o = this.collection.findOneAndDelete((BasicDBObject) q.getQuery());
+        Object o = this.collection.findOneAndDelete((Document) q.getQuery());
         if (o == null) {
             return null;
         }
@@ -253,7 +254,7 @@ public class SimpleCollection {
     }
 
     public DeleteResult removeSync(Query q) throws Exception {
-        return this.collection.deleteMany((BasicDBObject) q.getQuery());
+        return this.collection.deleteMany((Document) q.getQuery());
     }
 
     public void remove(Query q) {
@@ -379,8 +380,8 @@ public class SimpleCollection {
         return false;
     }
 
-    public static <T> BasicDBObject asDBObject(T instance) {
-        BasicDBObject b = new BasicDBObject();
+    public static <T> Document asDBObject(T instance) {
+        Document b = new Document();
         Collection<Field> fieldMap = getAnnotationFields(instance.getClass(), DBSync.class);
         for (Field f : fieldMap) {
             try {
@@ -425,7 +426,7 @@ public class SimpleCollection {
                     } else {
                         BasicDBList list = new BasicDBList();
                         for (Object collectionObject : collectionData) {
-                            BasicDBObject collectionDBObject = asDBObject(collectionType.cast(collectionObject));
+                            Document collectionDBObject = asDBObject(collectionType.cast(collectionObject));
                             list.add(collectionDBObject);
                         }
                         b.put(fieldName, list);
@@ -433,7 +434,7 @@ public class SimpleCollection {
                         continue;
                     }
                 } else if (!isPrimitive(f.getType())) {
-                    BasicDBObject data = asDBObject(f.get(instance));
+                    Document data = asDBObject(f.get(instance));
                     b.put(fieldName, data);
                     f.setAccessible(hadAccess);
                     continue;
@@ -449,7 +450,7 @@ public class SimpleCollection {
     }
 
     public final <T> void save(T instance) {
-        BasicDBObject obj = asDBObject(instance);
+        Document obj = asDBObject(instance);
         Collection<Field> fields = getAnnotationFields(instance.getClass(), DBSync.class);
         String key = null;
         Object value = null;
@@ -643,7 +644,7 @@ public class SimpleCollection {
     }
 
     public Document findAndUpdateSync(Query q, Update u) {
-        Document result = (Document) this.collection.findOneAndUpdate((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery());
+        Document result = (Document) this.collection.findOneAndUpdate((Document) q.getQuery(), (Document) u.getUpdateQuery());
         return result;
     }
 
