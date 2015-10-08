@@ -33,6 +33,16 @@ public class MongoModelManager<T> {
     public MongoCollection getHandle() {
         return this.collection.getHandle();
     }
+    
+    public void save(T object) {
+        this.collection.save(object);
+    }
+    
+    public void saveMany(T[] objects) {
+        for (T t : objects) {
+            this.save(t);
+        }
+    }
 
     public void loadAll(LoadMultiCallback callback) {
         this.collection.loadAll(type, callback);
