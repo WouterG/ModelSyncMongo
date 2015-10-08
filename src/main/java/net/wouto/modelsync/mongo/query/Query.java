@@ -1,74 +1,74 @@
 package net.wouto.modelsync.mongo.query;
 
 import com.mongodb.BasicDBList;
-import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import java.util.regex.Pattern;
+import org.bson.Document;
 
 public class Query {
 
-    private final DBObject queryObject;
+    private final Document queryObject;
 
     public Query() {
-        this.queryObject = new BasicDBObject();
+        this.queryObject = new Document();
     }
     
-    public Query(DBObject q) {
+    public Query(Document q) {
         this.queryObject = q;
     }
 
-    public DBObject getQuery() {
+    public Document getQuery() {
         return this.queryObject;
     }
 
     public static Query greaterThan(String key, Number nr) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$gt", nr)
+                        new Document("$gt", nr)
                 )
         );
     }
 
     public static Query greaterThanOrEqual(String key, Number nr) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$gte", nr)
+                        new Document("$gte", nr)
                 )
         );
     }
 
     public static Query lessThan(String key, Number nr) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$lt", nr)
+                        new Document("$lt", nr)
                 )
         );
     }
 
     public static Query lessThanOrEqual(String key, Number nr) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$lte", nr)
+                        new Document("$lte", nr)
                 )
         );
     }
 
     public static Query notEqual(String key, Object obj) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$ne", obj)
+                        new Document("$ne", obj)
                 )
         );
     }
     
     public static Query equals(String key, Object obj) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
                         obj
                 )
@@ -81,27 +81,27 @@ public class Query {
     
     public static Query exists(String key, boolean exists) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$exists", exists)
+                        new Document("$exists", exists)
                 )
         );
     }
     
     public static Query type(String key, Number nr) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$type", nr)
+                        new Document("$type", nr)
                 )
         );
     }
     
     public static Query mod(String key, final Number devisor, final Number remainder) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject(
+                        new Document(
                                 "$mod",
                                 new BasicDBList() {
                                     {
@@ -128,7 +128,7 @@ public class Query {
     
     private static Query regex(String key, String pattern, int options) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
                         Pattern.compile(pattern, options)
                 )
@@ -141,9 +141,9 @@ public class Query {
     
     public static Query text(String search, String language) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         "$text",
-                        new BasicDBObject()
+                        new Document()
                             .append("$search", search)
                             .append("$language", language)
                 )
@@ -152,9 +152,9 @@ public class Query {
     
     public static Query size(String key, Number size) {
         return new Query(
-                new BasicDBObject(
+                new Document(
                         key,
-                        new BasicDBObject("$size", size)
+                        new Document("$size", size)
                 )
         );
     }
@@ -196,7 +196,7 @@ public class Query {
     public Query append(Query other) {
         for (String k : other.queryObject.keySet()) {
             DBObject obj = (DBObject) other.queryObject.get(k);
-            if (this.queryObject.containsField(k)) {
+            if (this.queryObject.containsKey(k)) {
                 obj.putAll((DBObject) this.queryObject.get(k));
             }
             this.queryObject.put(k, obj);

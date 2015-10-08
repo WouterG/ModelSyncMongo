@@ -1,6 +1,5 @@
 package net.wouto.modelsync.mongo;
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -10,15 +9,10 @@ import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
-import net.wouto.modelsync.mongo.callbacks.DeleteCallback;
-import net.wouto.modelsync.mongo.callbacks.LoadMultiCallback;
-import net.wouto.modelsync.mongo.callbacks.LoadOneCallback;
-import net.wouto.modelsync.mongo.callbacks.MultiReadCallback;
-import net.wouto.modelsync.mongo.callbacks.ReadCallback;
-import net.wouto.modelsync.mongo.callbacks.UpdateCallback;
-import net.wouto.modelsync.mongo.callbacks.WriteCallback;
+import net.wouto.modelsync.mongo.callbacks.*;
 import net.wouto.modelsync.mongo.query.Query;
 import net.wouto.modelsync.mongo.update.Update;
+import org.bson.Document;
 
 public class MongoModelManager<T> {
 
@@ -129,15 +123,15 @@ public class MongoModelManager<T> {
         return this.collection.findOneSync(q);
     }
 
-    public void insert(BasicDBObject obj, WriteCallback callback) {
+    public void insert(Document obj, DocumentWriteCallback callback) {
         this.collection.insert(obj, callback);
     }
 
-    public void insert(BasicDBObject obj) {
+    public void insert(Document obj) {
         this.collection.insert(obj);
     }
 
-    public void insertSync(BasicDBObject obj) throws Exception {
+    public void insertSync(Document obj) throws Exception {
         this.collection.insertSync(obj);
     }
 

@@ -1,32 +1,31 @@
 package net.wouto.modelsync.mongo.update;
 
 import com.mongodb.BasicDBList;
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
 import java.util.Arrays;
 import net.wouto.modelsync.mongo.query.Query;
+import org.bson.Document;
 
 public class Update {
     
-    private final DBObject updateObject;
+    private final Document updateObject;
 
     public Update() {
-        this.updateObject = new BasicDBObject();
+        this.updateObject = new Document();
     }
     
-    public Update(DBObject update) {
+    public Update(Document update) {
         this.updateObject = update;
     }
 
-    public DBObject getUpdateQuery() {
+    public Document getUpdateQuery() {
         return this.updateObject;
     }
     
     public Update append(Update other) {
         for (String k : other.updateObject.keySet()) {
-            DBObject obj = (DBObject) other.updateObject.get(k);
-            if (this.updateObject.containsField(k)) {
-                obj.putAll((DBObject) this.updateObject.get(k));
+            Document obj = (Document) other.updateObject.get(k);
+            if (this.updateObject.containsKey(k)) {
+                obj.putAll((Document) this.updateObject.get(k));
             }
             this.updateObject.put(k, obj);
         }
@@ -35,58 +34,58 @@ public class Update {
     
     public static Update increment(String field, Number amount) {
         return new Update(
-                new BasicDBObject("$inc",
-                        new BasicDBObject(field, amount)
+                new Document("$inc",
+                        new Document(field, amount)
                 )
         );
     }
     
     public static Update multiply(String field, Number multiplier) {
         return new Update(
-                new BasicDBObject("$mul",
-                        new BasicDBObject(field, multiplier)
+                new Document("$mul",
+                        new Document(field, multiplier)
                 )
         );
     }
     
     public static Update rename(String field, String newFieldName) {
         return new Update(
-                new BasicDBObject("$rename",
-                        new BasicDBObject(field, newFieldName)
+                new Document("$rename",
+                        new Document(field, newFieldName)
                 )
         );
     }
     
     public static Update setOnInsert(String field, Object value) {
         return new Update(
-                new BasicDBObject("$setOnInsert", new BasicDBObject(field, value))
+                new Document("$setOnInsert", new Document(field, value))
         );
     }
     
     public static Update set(String field, Object value) {
         return new Update(
-                new BasicDBObject("$set", new BasicDBObject(field, value))
+                new Document("$set", new Document(field, value))
         );
     }
     
     public static Update unset(String field) {
         return new Update(
-                new BasicDBObject(field, "")
+                new Document(field, "")
         );
     }
     
     public static Update min(String field, Number nr) {
         return new Update(
-                new BasicDBObject("$min",
-                        new BasicDBObject(field, nr)
+                new Document("$min",
+                        new Document(field, nr)
                 )
         );
     }
     
     public static Update max(String field, Number nr) {
         return new Update(
-                new BasicDBObject("$max",
-                        new BasicDBObject(field, nr)
+                new Document("$max",
+                        new Document(field, nr)
                 )
         );
     }
@@ -99,11 +98,11 @@ public class Update {
      */
     public static Update currentDate(String field) {
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$currentDate",
-                        new BasicDBObject(
+                        new Document(
                                 field,
-                                new BasicDBObject(
+                                new Document(
                                         "$type", 
                                         "date"
                                 )
@@ -120,11 +119,11 @@ public class Update {
      */
     public static Update currentTimestamp(String field) {
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$currentDate",
-                        new BasicDBObject(
+                        new Document(
                                 field,
-                                new BasicDBObject(
+                                new Document(
                                         "$type", 
                                         "timestamp"
                                 )
@@ -135,18 +134,18 @@ public class Update {
     
     public static Update addToSet(String field, Object value) {
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$addToSet",
-                        new BasicDBObject(field, value)
+                        new Document(field, value)
                 )
         );
     }
     
     public static Update pop(String field, PopOption pop) {
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$pop",
-                        new BasicDBObject(field, pop.c)
+                        new Document(field, pop.c)
                 )
         );
     }
@@ -155,9 +154,9 @@ public class Update {
         BasicDBList items = new BasicDBList();
         items.addAll(Arrays.asList(objs));
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$pullAll",
-                        new BasicDBObject(
+                        new Document(
                                 field, 
                                 items
                         )
@@ -167,16 +166,16 @@ public class Update {
     
     public static Update pull(String field, Object value) {
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$pull",
-                        new BasicDBObject(field, value)
+                        new Document(field, value)
                 )
         );
     }
     
     public static Update pull(String field, Query query) {
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$pull",
                         query.getQuery()
                 )
@@ -187,18 +186,18 @@ public class Update {
         BasicDBList list = new BasicDBList();
         list.addAll(Arrays.asList(values));
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$pullAll",
-                        new BasicDBObject(field, list)
+                        new Document(field, list)
                 )
         );
     }
     
     public static Update push(String field, Object value) {
         return new Update(
-                new BasicDBObject(
+                new Document(
                         "$push", 
-                        new BasicDBObject(field, value)
+                        new Document(field, value)
                 )
         );
     }
