@@ -1,9 +1,9 @@
 package net.wouto.modelsync.mongo.callbacks;
 
-import com.mongodb.client.MongoCursor;
+import com.mongodb.DBObject;
 
 public interface MultiReadCallback {
     
-    public void onQueryDone(MongoCursor result, Exception err);
+    public void onQueryDone(DBObject[] result, Exception err);
     
 }

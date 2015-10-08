@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.wouto</groupId>
     <artifactId>ModelSyncMongoDB</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.2</version>
     <packaging>jar</packaging>
     <build>
         <plugins>
@@ -13,7 +13,7 @@
                 <version>2.3.2</version>
                 <configuration>
                     <finalName>SimpleMongo</finalName>      
-					<outputDirectory>C:/m2-repo</outputDirectory>
+                    <outputDirectory>C:/m2-repo</outputDirectory>
                 </configuration>
             </plugin>       
         </plugins>

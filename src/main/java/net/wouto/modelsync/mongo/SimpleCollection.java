@@ -24,7 +24,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.wouto.modelsync.mongo.annotations.DBSync;
 import net.wouto.modelsync.mongo.callbacks.DeleteCallback;
-import net.wouto.modelsync.mongo.callbacks.LoadAllCallback;
+import net.wouto.modelsync.mongo.callbacks.FindAndUpdateCallback;
+import net.wouto.modelsync.mongo.callbacks.LoadMultiCallback;
 import net.wouto.modelsync.mongo.callbacks.MultiReadCallback;
 import net.wouto.modelsync.mongo.callbacks.ReadCallback;
 import net.wouto.modelsync.mongo.callbacks.UpdateCallback;
@@ -206,8 +207,12 @@ public class SimpleCollection {
             public void run() {
                 try {
                     MongoCursor c = SimpleCollection.this.findSync(q);
+                    List<DBObject> data = new ArrayList();
+                    while (c.hasNext()) {
+                        data.add((DBObject) c.next());
+                    }
                     if (callback != null) {
-                        callback.onQueryDone(c, null);
+                        callback.onQueryDone(data.toArray(new DBObject[data.size()]), null);
                     }
                 } catch (Exception ex) {
                     if (callback != null) {
@@ -293,7 +298,7 @@ public class SimpleCollection {
         return (T[]) data.toArray((T[]) Array.newInstance(c, data.size()));
     }
 
-    public <T> void loadAll(final Class<T> c, final LoadAllCallback callback) {
+    public <T> void loadAll(final Class<T> c, final LoadMultiCallback callback) {
         this.scheduler.doRead(new Runnable() {
             @Override
             public void run() {
@@ -478,7 +483,7 @@ public class SimpleCollection {
         return instance;
     }
 
-    private <T> T fromDBObject(Class<T> type, DBObject data) {
+    public <T> T fromDBObject(Class<T> type, DBObject data) {
         try {
             T obj = (T) instantiate(type);
             return fromDBObject(obj, data);
@@ -490,7 +495,7 @@ public class SimpleCollection {
         return null;
     }
 
-    private <T> T fromDBObject(T instance, DBObject data) {
+    public <T> T fromDBObject(T instance, DBObject data) {
         Collection<Field> fields = getAnnotationFields(instance.getClass(), DBSync.class);
         for (Field f : fields) {
             DBSync load = f.getAnnotation(DBSync.class);
@@ -631,6 +636,31 @@ public class SimpleCollection {
                     callback.onObjectLoaded(cast.cast(instance));
                 } else {
                     System.out.println("Failed loading data for " + instance.getClass().getName());
+                }
+            }
+
+        });
+    }
+
+    public Document findAndUpdateSync(Query q, Update u) {
+        Document result = (Document) this.collection.findOneAndUpdate((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery());
+        return result;
+    }
+
+    public void findAndUpdate(final Query q, final Update u, final FindAndUpdateCallback callback) {
+        this.scheduler.doWrite(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    Document d = SimpleCollection.this.findAndUpdateSync(q, u);
+                    if (callback != null) {
+                        callback.onQueryDone(d, null);
+                    }
+                } catch (Exception ex) {
+                    if (callback != null) {
+                        callback.onQueryDone(null, ex);
+                    }
                 }
             }
 
