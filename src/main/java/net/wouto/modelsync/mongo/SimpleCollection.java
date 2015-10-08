@@ -24,6 +24,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.wouto.modelsync.mongo.annotations.DBSync;
 import net.wouto.modelsync.mongo.callbacks.DeleteCallback;
+import net.wouto.modelsync.mongo.callbacks.FindAndUpdateCallback;
 import net.wouto.modelsync.mongo.callbacks.LoadMultiCallback;
 import net.wouto.modelsync.mongo.callbacks.MultiReadCallback;
 import net.wouto.modelsync.mongo.callbacks.ReadCallback;
@@ -624,7 +625,7 @@ public class SimpleCollection {
             callback.onObjectLoaded(cast.cast(instance));
             return;
         }
-        this.findOne(q, new ReadCallback<DBObject>() {
+        this.findOne(q, new ReadCallback() {
 
             @Override
             public void onQueryDone(DBObject result, Exception err) {
@@ -635,6 +636,31 @@ public class SimpleCollection {
                     callback.onObjectLoaded(cast.cast(instance));
                 } else {
                     System.out.println("Failed loading data for " + instance.getClass().getName());
+                }
+            }
+
+        });
+    }
+
+    public Document findAndUpdateSync(Query q, Update u) {
+        Document result = (Document) this.collection.findOneAndUpdate((BasicDBObject) q.getQuery(), (BasicDBObject) u.getUpdateQuery());
+        return result;
+    }
+
+    public void findAndUpdate(final Query q, final Update u, final FindAndUpdateCallback callback) {
+        this.scheduler.doWrite(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    Document d = SimpleCollection.this.findAndUpdateSync(q, u);
+                    if (callback != null) {
+                        callback.onQueryDone(d, null);
+                    }
+                } catch (Exception ex) {
+                    if (callback != null) {
+                        callback.onQueryDone(null, ex);
+                    }
                 }
             }
 

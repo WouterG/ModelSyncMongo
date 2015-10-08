@@ -34,6 +34,10 @@ public class MongoModelManager<T> {
         return this.collection.getHandle();
     }
     
+    public SimpleCollection getLibraryHandle() {
+        return this.collection;
+    }
+    
     public void save(T object) {
         this.collection.save(object);
     }
