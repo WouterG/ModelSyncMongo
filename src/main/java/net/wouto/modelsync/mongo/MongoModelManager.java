@@ -1,6 +1,5 @@
 package net.wouto.modelsync.mongo;
 
-import com.mongodb.DBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.result.DeleteResult;
@@ -66,7 +65,7 @@ public class MongoModelManager<T> {
         this.collection.findAndRemove(q, new ReadCallback() {
 
             @Override
-            public void onQueryDone(DBObject result, Exception err) {
+            public void onQueryDone(Document result, Exception err) {
                 if (err != null) {
                     callback.onQueryDone(null, err);
                 } else {
@@ -77,7 +76,7 @@ public class MongoModelManager<T> {
         });
     }
 
-    public DBObject findOneAndRemoveSync(Query q) throws Exception {
+    public Document findOneAndRemoveSync(Query q) throws Exception {
         return this.collection.findOneAndRemoveSync(q);
     }
 
@@ -85,12 +84,12 @@ public class MongoModelManager<T> {
         this.collection.find(q, new MultiReadCallback() {
 
             @Override
-            public void onQueryDone(DBObject[] result, Exception err) {
+            public void onQueryDone(Document[] result, Exception err) {
                 if (err != null) {
                     callback.onQueryDone(null, err);
                 } else {
                     List<T> objects = new ArrayList();
-                    for (DBObject r : result) {
+                    for (Document r : result) {
                         objects.add(MongoModelManager.this.collection.fromDBObject(type, r));
                     }
                     callback.onQueryDone((T[])objects.toArray((T[])Array.newInstance(type, objects.size())), err);
@@ -108,7 +107,7 @@ public class MongoModelManager<T> {
         this.collection.findOne(q, new ReadCallback() {
 
             @Override
-            public void onQueryDone(DBObject result, Exception err) {
+            public void onQueryDone(Document result, Exception err) {
                 if (err != null) {
                     callback.onQueryDone(null, err);
                 } else {
@@ -119,7 +118,7 @@ public class MongoModelManager<T> {
         });
     }
 
-    public DBObject findOneSync(Query q) throws Exception {
+    public Document findOneSync(Query q) throws Exception {
         return this.collection.findOneSync(q);
     }
 

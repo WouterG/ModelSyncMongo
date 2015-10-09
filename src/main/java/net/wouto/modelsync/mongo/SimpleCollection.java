@@ -1,9 +1,8 @@
 package net.wouto.modelsync.mongo;
 
-import com.mongodb.BasicDBList;
-import com.mongodb.DBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
+import static com.mongodb.client.model.Filters.eq;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -108,10 +107,9 @@ public class SimpleCollection {
     }
 
     public UpdateResult updateOrInsertSync(String key, Object value, Update set) throws Exception {
-        set.append(Update.setOnInsert(key, value));
         UpdateOptions u = new UpdateOptions();
         u.upsert(true);
-        return this.collection.updateOne(new Document(key, value), (Document) set.getUpdateQuery(), u);
+        return this.collection.replaceOne(eq(key, value), (Document) set.getUpdateQuery(), u);
     }
 
     public void updateOrInsert(String key, Object value, Update set) {
@@ -128,9 +126,7 @@ public class SimpleCollection {
                     if (callback != null) {
                         callback.onQueryDone(wr, null);
                     }
-                    System.out.println("inserted succesfully");
                 } catch (Exception ex) {
-                    ex.printStackTrace();
                     if (callback != null) {
                         callback.onQueryDone(null, ex);
                     }
@@ -168,13 +164,13 @@ public class SimpleCollection {
         });
     }
 
-    public DBObject findOneSync(Query q) throws Exception {
+    public Document findOneSync(Query q) throws Exception {
         MongoCursor cursor = this.collection.find((Document) q.getQuery()).iterator();
         Object o = cursor.next();
         if (o == null) {
             return null;
         }
-        return (DBObject) o;
+        return (Document) o;
     }
 
     public void findOne(final Query q, final ReadCallback callback) {
@@ -183,7 +179,7 @@ public class SimpleCollection {
             @Override
             public void run() {
                 try {
-                    DBObject d = SimpleCollection.this.findOneSync(q);
+                    Document d = SimpleCollection.this.findOneSync(q);
                     if (callback != null) {
                         callback.onQueryDone(d, null);
                     }
@@ -208,12 +204,12 @@ public class SimpleCollection {
             public void run() {
                 try {
                     MongoCursor c = SimpleCollection.this.findSync(q);
-                    List<DBObject> data = new ArrayList();
+                    List<Document> data = new ArrayList();
                     while (c.hasNext()) {
-                        data.add((DBObject) c.next());
+                        data.add((Document) c.next());
                     }
                     if (callback != null) {
-                        callback.onQueryDone(data.toArray(new DBObject[data.size()]), null);
+                        callback.onQueryDone(data.toArray(new Document[data.size()]), null);
                     }
                 } catch (Exception ex) {
                     if (callback != null) {
@@ -225,12 +221,12 @@ public class SimpleCollection {
         });
     }
 
-    public DBObject findOneAndRemoveSync(Query q) throws Exception {
+    public Document findOneAndRemoveSync(Query q) throws Exception {
         Object o = this.collection.findOneAndDelete((Document) q.getQuery());
         if (o == null) {
             return null;
         }
-        return (DBObject) o;
+        return (Document) o;
     }
 
     public void findAndRemove(final Query q, final ReadCallback callback) {
@@ -239,7 +235,7 @@ public class SimpleCollection {
             @Override
             public void run() {
                 try {
-                    DBObject obj = SimpleCollection.this.findOneAndRemoveSync(q);
+                    Document obj = SimpleCollection.this.findOneAndRemoveSync(q);
                     if (callback != null) {
                         callback.onQueryDone(obj, null);
                     }
@@ -290,7 +286,7 @@ public class SimpleCollection {
         MongoCursor cursor = this.findSync(Query.empty);
         ArrayList<T> data = new ArrayList();
         while (cursor.hasNext()) {
-            DBObject obj = (DBObject) JSON.parse(((Document) cursor.next()).toJson());
+            Document obj = (Document) JSON.parse(((Document) cursor.next()).toJson());
             T instance = (T) constructor.newInstance();
             SimpleCollection.this.fromDBObject(instance, obj);
             data.add(instance);
@@ -408,7 +404,7 @@ public class SimpleCollection {
                         f.setAccessible(hadAccess);
                         continue;
                     } else {
-                        BasicDBList list = new BasicDBList();
+                        ArrayList list = new ArrayList();
                         for (Object arrayObject : arrayData) {
                             list.add(asDBObject(arrayObject));
                         }
@@ -424,7 +420,7 @@ public class SimpleCollection {
                         f.setAccessible(hadAccess);
                         continue;
                     } else {
-                        BasicDBList list = new BasicDBList();
+                        ArrayList list = new ArrayList();
                         for (Object collectionObject : collectionData) {
                             Document collectionDBObject = asDBObject(collectionType.cast(collectionObject));
                             list.add(collectionDBObject);
@@ -457,7 +453,7 @@ public class SimpleCollection {
         for (Field f : fields) {
             if (f.getAnnotation(DBSync.class).index()) {
                 key = f.getName();
-                value = obj.remove(f.getName());
+                value = obj.get(f.getName());
                 break;
             }
         }
@@ -466,7 +462,16 @@ public class SimpleCollection {
             return;
         }
         Update update = new Update(obj);
-        this.updateOrInsert(key, value, update);
+        this.updateOrInsert(key, value, update, new UpdateCallback() {
+
+            @Override
+            public void onQueryDone(UpdateResult result, Exception err) {
+                if (err != null) {
+                    err.printStackTrace();
+                }
+            }
+            
+        });
     }
 
     private <T> T instantiate(Class<T> cls) throws Exception {
@@ -477,14 +482,34 @@ public class SimpleCollection {
         }
         final List<Object> params = new ArrayList();
         for (Class<?> pType : constr.getParameterTypes()) {
-            params.add((pType.isPrimitive()) ? ClassUtils.primitiveToWrapper(pType).newInstance() : null);
+            if (pType.isPrimitive() || primitives.contains(pType)) {
+                if (pType.isPrimitive()) {
+                    pType = ClassUtils.primitiveToWrapper(pType);
+                }
+                if (pType == Integer.class || 
+                        pType == Long.class || 
+                        pType == Short.class || 
+                        pType == Byte.class) {
+                    params.add(pType.cast(0));
+                } else if (pType == Character.class) {
+                    params.add('\0');
+                } else if (pType == Boolean.class) {
+                    params.add(false);
+                } else if (pType == Float.class || pType == Double.class) {
+                    params.add(pType.cast(0.0));
+                } else if (pType == Object.class || pType == String.class) {
+                    params.add(null);
+                }
+            } else {
+                params.add(null);
+            }
         }
         final T instance = constr.newInstance(params.toArray());
         constr.setAccessible(a);
         return instance;
     }
 
-    public <T> T fromDBObject(Class<T> type, DBObject data) {
+    public <T> T fromDBObject(Class<T> type, Document data) {
         try {
             T obj = (T) instantiate(type);
             return fromDBObject(obj, data);
@@ -496,7 +521,7 @@ public class SimpleCollection {
         return null;
     }
 
-    public <T> T fromDBObject(T instance, DBObject data) {
+    public <T> T fromDBObject(T instance, Document data) {
         Collection<Field> fields = getAnnotationFields(instance.getClass(), DBSync.class);
         for (Field f : fields) {
             DBSync load = f.getAnnotation(DBSync.class);
@@ -507,7 +532,7 @@ public class SimpleCollection {
             if (!load.value().isEmpty()) {
                 varName = load.value();
             }
-            if (!data.containsField(varName)) {
+            if (!data.containsKey(varName)) {
                 continue;
             }
             boolean accessible = f.isAccessible();
@@ -515,6 +540,8 @@ public class SimpleCollection {
                 f.setAccessible(true);
             }
             if (f.getType().isArray()) { // array
+                // unsupported? ;s - reflection doesn't allow this
+                /*
                 Class<?> arrayType = getArrayType(f);
                 if (isPrimitive(arrayType)) {
                     try {
@@ -526,19 +553,19 @@ public class SimpleCollection {
                     f.setAccessible(accessible);
                     continue;
                 }
-                BasicDBList arrayData = (BasicDBList) data.get(varName);
+                ArrayList arrayData = (ArrayList) data.get(varName);
                 Collection arrayResult = new ArrayList();
                 for (Object arrayObject : arrayData) {
-                    DBObject arrayObjectDB = (DBObject) arrayObject;
+                    Document arrayObjectDB = (Document) arrayObject;
                     Object arrayObjectOutput = fromDBObject(arrayType, arrayObjectDB);
                     arrayResult.add(arrayObjectOutput);
                 }
                 try {
-                    f.set(instance, arrayResult.toArray());
+                    f.set(instance, arrayResult.toArray((f.getType().cast(Array.newInstance(f.getType(), arrayResult.size()))));
                 } catch (IllegalArgumentException | IllegalAccessException ex) {
                     Logger.getLogger(SimpleCollection.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                f.setAccessible(accessible);
+                f.setAccessible(accessible); */
                 continue;
             } else if (Collection.class.isAssignableFrom(f.getType())) { // collection
                 Class<?> collectionType = getCollectionType(f);
@@ -551,10 +578,10 @@ public class SimpleCollection {
                     f.setAccessible(accessible);
                     continue;
                 }
-                BasicDBList collectionData = (BasicDBList) data.get(varName);
+                ArrayList collectionData = (ArrayList) data.get(varName);
                 Collection collectionResult = new ArrayList();
                 for (Object collectionObject : collectionData) {
-                    DBObject collectionObjectDB = (DBObject) collectionObject;
+                    Document collectionObjectDB = (Document) collectionObject;
                     Object collectionObjectOutput = fromDBObject(collectionType, collectionObjectDB);
                     collectionResult.add(collectionObjectOutput);
                 }
@@ -566,7 +593,7 @@ public class SimpleCollection {
                 f.setAccessible(accessible);
                 continue;
             } else if (!isPrimitive(f.getType())) {
-                Object o = fromDBObject(f.getType(), (DBObject) data.get(varName));
+                Object o = fromDBObject(f.getType(), (Document) data.get(varName));
                 try {
                     f.set(instance, o);
                 } catch (IllegalArgumentException | IllegalAccessException ex) {
@@ -629,7 +656,7 @@ public class SimpleCollection {
         this.findOne(q, new ReadCallback() {
 
             @Override
-            public void onQueryDone(DBObject result, Exception err) {
+            public void onQueryDone(Document result, Exception err) {
                 if (err != null) {
                     err.printStackTrace();
                 } else if (result != null) {

@@ -1,9 +1,9 @@
 package net.wouto.modelsync.mongo.callbacks;
 
-import com.mongodb.DBObject;
+import org.bson.Document;
 
 public interface ReadCallback {
  
-    public void onQueryDone(DBObject result, Exception err);
+    public void onQueryDone(Document result, Exception err);
     
 }
